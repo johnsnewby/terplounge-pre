@@ -53,6 +53,8 @@
 
       const targetLanguageSelector = document.getElementById("targetLanguage");
       const langageSelector = document.getElementById("sourceLanguage");
+      const content = document.getElementById("content");
+
       let allLanguages = await getAllLanguages();
 
       for (const language of allLanguages) {
@@ -63,6 +65,7 @@
       }
 
       export const sourceUpdated = async () => {
+        content.innerHTML = "";
         while (targetLanguageSelector.options.length > 1) {
           targetLanguageSelector.remove(1);
         }
@@ -101,10 +104,9 @@
           targetLang,
         );
 
-        let content = document.getElementById("content");
         content.innerHTML = "<h2>Available recordings</h2>";
         for (var material of compatiblePracticeMaterials) {
-          content.innerHTML += `<a href="${material.directory}?target=${targetLang}">${material.metadata.name}</a><br>`;
+          content.innerHTML += `<a href="/practice${material.directory}?target=${targetLang}">${material.metadata.name}</a><br>`;
         }
         JSON.stringify(compatiblePracticeMaterials);
         console.log(compatiblePracticeMaterials);
