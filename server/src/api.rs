@@ -1,15 +1,17 @@
 use askama::Template; // bring trait in scope
 
 use crate::compare::practice;
+use crate::metadata::Metadata;
 use crate::session::{get_sessions, mark_session_for_closure_uuid, user_connected, SessionData};
 use crate::translate;
-
+use bytes::Bytes;
 use crossbeam_channel::Sender;
 use rust_embed::RustEmbed;
 use std::collections::HashMap;
+use std::io::Read;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use warp::reply::Json;
-use warp::Filter;
+use warp::{http::Response, Filter};
 
 #[derive(Template)]
 #[template(path = "index.html", escape = "none")]
@@ -28,6 +30,33 @@ pub async fn index() -> std::result::Result<impl warp::Reply, warp::Rejection> {
     let template = Index { sessions };
 
     Ok(warp::reply::html(template.render().unwrap()))
+}
+
+pub async fn serve_resource(
+    resource_path: String,
+) -> std::result::Result<impl warp::Reply, warp::Rejection> {
+    let metadata = match Metadata::from_resource_path(&resource_path) {
+        Ok(m) => m,
+        Err(e) => {
+            log::error!("Error: {:?} loading {}", e, resource_path);
+            return Err(warp::reject::not_found());
+        }
+    };
+    let content_path = format!("{}/{}", resource_path, metadata.audio);
+    log::debug!("content_path is {}", content_path);
+    let mut f = std::fs::File::open(content_path.clone()).unwrap();
+    let metadata = std::fs::metadata(&content_path).expect("unable to read metadata");
+    let mut buffer = vec![0; metadata.len() as usize];
+    f.read(&mut buffer).expect("buffer overflow");
+    let b: Bytes = Bytes::from(buffer);
+    let response = match Response::builder().body(b) {
+        Ok(b) => b,
+        Err(e) => {
+            log::error!("Error making response: {:?}", e);
+            return Err(warp::reject::not_found());
+        }
+    };
+    Ok(response)
 }
 
 pub async fn serve(translate_tx: Sender<translate::TranslationRequest>) {
@@ -59,9 +88,12 @@ pub async fn serve(translate_tx: Sender<translate::TranslationRequest>) {
 
     let practice = warp::get().and(
         warp::path!("practice" / String / String)
-            .and_then(async move |directory, lang| {
-                practice(directory, lang).await}),
-        
+            .and_then(async move |directory, lang| practice(directory, lang).await),
+    );
+
+    let serve_resource = warp::get().and(
+        warp::path!("serve_resource" / String)
+            .and_then(async move |resource_path| serve_resource(resource_path).await),
     );
 
     let status = warp::path!("status" / String).and_then(async move |uuid| {
@@ -121,6 +153,7 @@ pub async fn serve(translate_tx: Sender<translate::TranslationRequest>) {
         .or(compare)
         .or(practice)
         .or(recordings)
+        .or(serve_resource)
         .or(status)
         .or(static_content_serve)
         .or(transcript);

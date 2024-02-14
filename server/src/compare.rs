@@ -60,18 +60,7 @@ pub async fn practice(
     resource_path: String,
     lang: String,
 ) -> std::result::Result<impl warp::Reply, warp::Rejection> {
-    let full_path = if resource_path.starts_with("/") {
-        resource_path.clone()
-    } else {
-        format!(
-            "{}/{}",
-            std::env::var("ASSETS_DIR").unwrap_or("../assets".to_string()),
-            resource_path
-        )
-    };
-    let metadata_path = format!("{}/metadata.json", full_path);
-    log::debug!("Path is {}", metadata_path);
-    let metadata = match Metadata::from_filename(metadata_path) {
+    let metadata = match Metadata::from_resource_path(&resource_path) {
         Ok(m) => m,
         Err(e) => {
             log::error!("Error: {:?}", e);
