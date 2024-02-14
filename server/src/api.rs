@@ -42,7 +42,7 @@ pub async fn serve_resource(
             return Err(warp::reject::not_found());
         }
     };
-    let content_path = format!("{}/{}", resource_path, metadata.audio);
+    let content_path = format!("{}/{}", metadata.enclosing_directory, metadata.audio);
     log::debug!("content_path is {}", content_path);
     let mut f = std::fs::File::open(content_path.clone()).unwrap();
     let metadata = std::fs::metadata(&content_path).expect("unable to read metadata");
