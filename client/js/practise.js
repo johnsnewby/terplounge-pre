@@ -38,8 +38,8 @@ export const getTargetLanguagesForSourceLanguage = async (sourceLanguage) => {
   const withSource = metadatas.filter((m) => m.native === sourceLanguage);
   let targetLanguages = [];
   for (var source of withSource) {
-    for (var translation of source.translations) {
-      targetLanguages.push(Object.keys(translation)[0]);
+    for (var translation of Object.keys(source.translations)) {
+      targetLanguages.push(translation);
     }
   }
   return [...new Set(targetLanguages)];
@@ -64,8 +64,8 @@ export async function getCompatiblePracticeMaterials(source,target) {
     if (candidate.metadata.native !== source) {
       continue;
     }
-    for (var dest of candidate.metadata.translations) {
-      if (dest[target]) {
+    for (var dest of Object.keys(candidate.metadata.translations)) {
+      if (dest === target) {
         compatiblePracticeMaterials.push(candidate);
         continue;
       }

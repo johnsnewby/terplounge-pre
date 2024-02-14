@@ -106,10 +106,8 @@
 
         content.innerHTML = "<h2>Available recordings</h2>";
         for (var material of compatiblePracticeMaterials) {
-          content.innerHTML += `<a href="/practice${material.directory}?target=${targetLang}">${material.metadata.name}</a><br>`;
+          content.innerHTML += `<a href="/practice/${material.directory}/${targetLang}" target="_blank">${material.metadata.name}</a><br>`;
         }
-        JSON.stringify(compatiblePracticeMaterials);
-        console.log(compatiblePracticeMaterials);
       };
 
       window.sourceUpdated = sourceUpdated;

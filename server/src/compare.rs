@@ -1,6 +1,7 @@
 use askama::Template; // bring trait in scope
 use std::fs;
 
+use crate::metadata::Metadata;
 use crate::session::find_session_with_uuid;
 
 fn escape(from: String) -> String {
@@ -14,6 +15,14 @@ fn escape(from: String) -> String {
 pub struct Comparison {
     source: String,
     dest: String,
+}
+
+#[derive(Template)]
+#[template(path = "practice.html", escape = "none")]
+pub struct PracticeData {
+    metadata: Metadata,
+    resource_path: String,
+    lang: String,
 }
 
 pub async fn compare(
@@ -47,15 +56,33 @@ pub async fn compare(
     Ok(warp::reply::html(template.render().unwrap()))
 }
 
-#[derive(Template)]
-#[template(path = "practice.html" escape = "none")]
-pub struct Practice {
-    asset_i: String,
+pub async fn practice(
     resource_path: String,
     lang: String,
-}
-pub async fn practice(
-    asset_id: String,
-    lang: String,
 ) -> std::result::Result<impl warp::Reply, warp::Rejection> {
+    let full_path = if resource_path.starts_with("/") {
+        resource_path.clone()
+    } else {
+        format!(
+            "{}/{}",
+            std::env::var("ASSETS_DIR").unwrap_or("../assets".to_string()),
+            resource_path
+        )
+    };
+    let metadata_path = format!("{}/metadata.json", full_path);
+    log::debug!("Path is {}", metadata_path);
+    let metadata = match Metadata::from_filename(metadata_path) {
+        Ok(m) => m,
+        Err(e) => {
+            log::error!("Error: {:?}", e);
+            return Err(warp::reject::not_found());
+        }
+    };
+    let template = PracticeData {
+        metadata,
+        resource_path,
+        lang,
+    };
+
+    Ok(warp::reply::html(template.render().unwrap()))
 }

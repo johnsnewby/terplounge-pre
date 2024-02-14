@@ -1,5 +1,6 @@
 use askama::Template; // bring trait in scope
 
+use crate::compare::practice;
 use crate::session::{get_sessions, mark_session_for_closure_uuid, user_connected, SessionData};
 use crate::translate;
 
@@ -56,8 +57,12 @@ pub async fn serve(translate_tx: Sender<translate::TranslationRequest>) {
         Ok::<&str, warp::Rejection>("foo")
     }));
 
-    let close = warp::get()
-        .and(warp::path!("practise" / String / String).and_then(async move |directory, lang| {}));
+    let practice = warp::get().and(
+        warp::path!("practice" / String / String)
+            .and_then(async move |directory, lang| {
+                practice(directory, lang).await}),
+        
+    );
 
     let status = warp::path!("status" / String).and_then(async move |uuid| {
         match crate::session::find_session_with_uuid(&uuid).await {
@@ -114,6 +119,7 @@ pub async fn serve(translate_tx: Sender<translate::TranslationRequest>) {
         .or(chat)
         .or(close)
         .or(compare)
+        .or(practice)
         .or(recordings)
         .or(status)
         .or(static_content_serve)
