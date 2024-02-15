@@ -86,7 +86,13 @@ export function startPractice() {
 }
 
 export function goToCompare(asset_id, lang) {
-  document.location = "/compare/" + asset_id + "/" + state.uuid + "/" + lang;
+  if (! stage.uuid) {
+    alert("Too soon!");
+    return;
+  }
+  if (confirm("Are you sure you are done?")) {
+    document.location = "/compare/" + asset_id + "/" + state.uuid + "/" + lang;
+  }
 }
 
 function connectToServer(callbackFunction) {

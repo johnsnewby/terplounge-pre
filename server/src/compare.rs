@@ -1,6 +1,7 @@
 use askama::Template; // bring trait in scope
 use std::fs;
 
+use crate::error::E;
 use crate::metadata::Metadata;
 use crate::session::find_session_with_uuid;
 
@@ -25,31 +26,29 @@ pub struct PracticeData {
     lang: String,
 }
 
+fn get_translation(resource_path: &String, lang: &String) -> E<String> {
+    let metadata = Metadata::from_resource_path(resource_path)?;
+    let source_path = format!(
+        "{}/{}",
+        metadata.enclosing_directory,
+        metadata.translations.get(lang).unwrap()
+    );
+    let source = fs::read_to_string(source_path.clone())?;
+    Ok(source)
+}
+
 pub async fn compare(
     resource_path: String,
     uuid: String,
     lang: String,
 ) -> std::result::Result<impl warp::Reply, warp::Rejection> {
-    let metadata = match Metadata::from_resource_path(&resource_path) {
-        Ok(m) => m,
+    let source = match get_translation(&resource_path, &lang) {
+        Ok(s) => s,
         Err(e) => {
-            log::error!("Couldn't load metadata {}", resource_path);
+            log::error!("Error: {:?}", e);
             return Err(warp::reject::not_found());
         }
     };
-    let source_path = format!(
-        "{}/{}",
-        metadata.enclosing_directory,
-        metadata.translations.get(&lang).unwrap()
-    );
-    let source = match fs::read_to_string(source_path.clone()) {
-        Ok(x) => escape(x),
-        Err(_) => {
-            log::error!("Couldn't load translation with path {}", source_path);
-            return Err(warp::reject::not_found());
-        }
-    };
-
     let session_id = find_session_with_uuid(&uuid)
         .await
         .ok_or(warp::reject::not_found())?;
