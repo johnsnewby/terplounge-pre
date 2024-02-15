@@ -26,13 +26,28 @@ pub struct PracticeData {
 }
 
 pub async fn compare(
-    asset_id: String,
+    resource_path: String,
     uuid: String,
     lang: String,
 ) -> std::result::Result<impl warp::Reply, warp::Rejection> {
-    let source = match fs::read_to_string(format!("../client/assets/{}/{}.txt", asset_id, lang)) {
+    let metadata = match Metadata::from_resource_path(&resource_path) {
+        Ok(m) => m,
+        Err(e) => {
+            log::error!("Couldn't load metadata {}", resource_path);
+            return Err(warp::reject::not_found());
+        }
+    };
+    let source_path = format!(
+        "{}/{}",
+        metadata.enclosing_directory,
+        metadata.translations.get(&lang).unwrap()
+    );
+    let source = match fs::read_to_string(source_path.clone()) {
         Ok(x) => escape(x),
-        Err(_) => return Err(warp::reject::not_found()),
+        Err(_) => {
+            log::error!("Couldn't load translation with path {}", source_path);
+            return Err(warp::reject::not_found());
+        }
     };
 
     let session_id = find_session_with_uuid(&uuid)
